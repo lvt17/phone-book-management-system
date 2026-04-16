@@ -1,0 +1,37 @@
+services:
+  # ─── MySQL Database ───────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: phonebook_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: phonebook
+    ports:
+      - "3307:3306"        # map ra cổng 3307 để tránh xung đột với MySQL sẵn có ở máy thật
+    volumes:
+      - phonebook_data:/var/lib/mysql   # giữ dữ liệu khi container restart
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-prootpassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # ─── Phonebook CLI App ────────────────────────────────────────
+  app:
+    build: .
+    container_name: phonebook_app
+    depends_on:
+      db:
+        condition: service_healthy   # đợi MySQL healthy mới start app
+    stdin_open: true    # giữ stdin mở (tương đương docker run -i)
+    tty: true           # cấp pseudo-TTY   (tương đương docker run -t)
+    environment:
+      MYSQL_HOST: db            # tên service trong Docker network
+      MYSQL_PORT: 3306
+      MYSQL_USER: root
+      MYSQL_PASSWORD: rootpassword
+      MYSQL_DATABASE: phonebook
+
+volumes:
+  phonebook_data:
